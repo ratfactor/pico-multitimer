@@ -1,0 +1,64 @@
+-------------------------------------------------------------------------------
+2021 David Gauer - License: CC-BY-SA-4.0
+-------------------------------------------------------------------------------
+
+This is the I2C communication I captured by running the Adafruit CircuitPython
+example (see neokey1x4_example.py in this directory) and Adafruit libraries.
+
+It setups up the NeoKey 1x4's "seesaw" microcontroller, the neopixel
+sub-device, and GPIO for the keyboard switch inputs.
+
+NOTE: In my actual project, I did a proper GPIO pin bulk set on all four
+keyboard switch pins at once. I also enabled interrupts on the four pins and
+used the NeoKey's interrupt out line.
+
+Capture device was a Siglent SDS1202X-E Oscilloscope. See
+
+    http://ratfactor.com/siglent-i2c
+
+for an illustrated guide to setting that up.
+
+This was hand-written (I even started on paper!) because there isn't that much
+of it and, frankly, just having this information at all was awesome and I felt
+like King Geek getting this far. :-)
+
+
+
+Adafruit "seesaw" microcontroller setup
+-------------------------------------------------------------------------------
+w 00 7f ff          - status swrst
+w 00 01             - status id
+r 55                -     'U' is the correct id (0x55)
+w 00 02             - status version
+r 13 74 2a a4       -     version number response
+
+
+
+On-board NeoPixel setup
+-------------------------------------------------------------------------------
+w 0e 01 03          - neopixel (0e) pin (01) is 3
+w 0e 03 00 0c       - neopixel buf_length 000c
+                      (0xC = 12 bytes, 3 colors * 4 pixels)
+
+
+
+GPIO setup (for each of the four keyboard IO pins)
+-------------------------------------------------------------------------------
+w 01 03 00 00 00 10 - gpio dirclr_bulk
+w 01 0b 00 00 00 10 - gpio pullenset
+w 01 05 00 00 00 10 - gpio bulk_set
+w 01 03 00 00 00 20
+w 01 0b 00 00 00 20   x3 for each pin
+w 01 05 00 00 00 20
+...              40
+...              80
+
+
+
+Reading the key pin statuses (done in a loop)
+NOTE: I used interrupts to get notified when a key was pressed and then polled
+the device in my actual project.
+-------------------------------------------------------------------------------
+w 01 04             - gpio bulk (read)
+r xx xx xx F0       - Only the F part of F0 are the pins we care about!
+

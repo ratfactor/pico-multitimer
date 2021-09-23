@@ -1,0 +1,29 @@
+= Dave's MultiTimer
+
+A multiple-category project/productivity timer with pretty RGB-lit
+MX-compatible keyboard keyswitches and backlit LCD output. Running a
+ridiculously powerful (yet inexpensive) dual-core ARM processor.
+
+== Work in progress!
+
+This is not a functioning timer _yet_. But I believe I've finally cleared the
+last of the hurdles and the basic timer functionality is just another weekend
+away. :-)
+
+== What's it made of?
+
+Hardware:
+
+* Raspberry Pi Pico microcontroller (RP2040 32-bit dual ARM Cortex-M0+)
+* Adafruit NeoKey 1x4 QT I2C Breakout (Cherry-compatible keypad + NeoPixels)
+* SparkFun SerLCD (RGB 16x2 LCD + AVR microcontroller with I2C, etc.)
+
+Runtime/VM:
+
+* link:http://docs.micropython.org/en/latest/rp2/quickref.html[MicroPython]
+* This `multitimer.py`
+
+image::multitimer.jpg[hardware multi-timer]
+
+Coming soon: Some sort of enclosure. Probably wood because that's what I have
+the tools to work with.
