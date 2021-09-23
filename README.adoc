@@ -1,5 +1,7 @@
 = Dave's MultiTimer
 
+image::multitimer.jpg[hardware multi-timer]
+
 A multiple-category project/productivity timer with pretty RGB-lit
 MX-compatible keyboard keyswitches and backlit LCD output. Running a
 ridiculously powerful (yet inexpensive) dual-core ARM processor.
@@ -9,6 +11,9 @@ ridiculously powerful (yet inexpensive) dual-core ARM processor.
 This is not a functioning timer _yet_. But I believe I've finally cleared the
 last of the hurdles and the basic timer functionality is just another weekend
 away. :-)
+
+Also coming soon: Some sort of enclosure. Probably wood because that's what I
+have the tools to work with.
 
 == What's it made of?
 
@@ -23,7 +28,3 @@ Runtime/VM:
 * link:http://docs.micropython.org/en/latest/rp2/quickref.html[MicroPython]
 * This `multitimer.py`
 
-image::multitimer.jpg[hardware multi-timer]
-
-Coming soon: Some sort of enclosure. Probably wood because that's what I have
-the tools to work with.
