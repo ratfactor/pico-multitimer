@@ -13,6 +13,8 @@ import machine
 import utime
 import micropython
 import binascii
+from machine import Timer
+from array import array
 
 pico_led = machine.Pin(25, machine.Pin.OUT)
 
@@ -70,6 +72,8 @@ LCD_SPECIALCMD = 0xFE
 # (Contrast was determined by a little looping test program.)
 #write_lcd(LCD_CONTRAST + [0xAA])
 write_lcd(LCD_CLEAR)
+write_lcd(LCD_SETRGB + [0xFF, 0xFF, 0xFF])
+
 
 # TEMP: write something to lcd so we know it works
 write_lcd("Once upon a time...")
@@ -168,13 +172,16 @@ write_neopixel([NP_SHOW])
 # TODO:
 # [x] Setup neokey key/switch inputs
 # [x] Get interrupt handler working on pico
-# [ ] Setup timer interrupt to refresh display
-# [ ] Keypresses toggle global on/off for the 4 timers
+# [x] Setup timer interrupt to refresh display
+# [x] Keypresses toggle global on/off for the 4 timers
 #     [ ] Debounce key input
-#     [ ] Immediately change LED state to provide feedback to user
+#     [x] Immediately change LED state to provide feedback to user
 #         that we registered the click
-#     [ ] LCD/timer display will reflect change upon next "tick"
+#     [x] LCD/timer display will reflect change upon next "tick"
 #         (from timer interrupt)
+# [ ] Display times as Minutes
+# [ ] Maybe flash the color reflecting the key, but then revert to a
+#     readable backlight color/brightness after a moment
 #
 # Timer callback (interrupt) example from micropython docs:
 #
@@ -184,37 +191,71 @@ write_neopixel([NP_SHOW])
 #
 # holy crap, i love this RP2040 chip!
 
-
+# Two arrays store 
+# B=unsigned byte
+# L=unsigned long (4 bytes)
+keys_active = array('B', [0, 0, 0, 0])
+timers      = array('L', [0, 0, 0, 0])
 
 # Setup IRQ and handler for keypress interrupt from neokey
-def handle_keypress(pin):
-    micropython.schedule(get_keypress, 0) # second param not used
+def on_keypress(pin):
+    micropython.schedule(handle_keypress, 0) # second param not used
 
-def get_keypress(throwaway_arg):
-    # This is just a temporary test to see if it works:
-    # (yay, it does!)
+def handle_keypress(throwaway_arg):
+    # Get keypress statuses
     write_gpio([GP_INTFLAG])
     utime.sleep_ms(10)
     flags = read_neokey(4) # bytes
-
-    print(flags[3])
+    
+    # Clear all keys, currently have just one active...
+    keys_active[0] = 0
+    keys_active[1] = 0
+    keys_active[2] = 0
+    keys_active[3] = 0
+            
     key = "unknown"
     if flags[3] == 16:
         key = "A"
+        keys_active[0] = 1
+        write_lcd(LCD_SETRGB + [0x00, 0xFF, 0x00])
+
     if flags[3] == 32:
         key = "B"
+        keys_active[1] = 1
+        write_lcd(LCD_SETRGB + [0xFF, 0x00, 0x00])
+
     if flags[3] == 64:
         key = "C"
+        keys_active[2] = 1
+        write_lcd(LCD_SETRGB + [0x00, 0x00, 0xFF])
+
     if flags[3] == 128:
         key = "D"
-    write_lcd(LCD_CLEAR)
-    write_lcd("Key: " + key)
+        keys_active[3] = 1
+        write_lcd(LCD_SETRGB + [0xFF, 0x00, 0xFF])
 
+
+# Set IRQ for the interrupt coming from the keypad into the pico
 p14 = machine.Pin(14, machine.Pin.IN, machine.Pin.PULL_UP)
-p14.irq(handle_keypress, machine.Pin.IRQ_FALLING)
+p14.irq(on_keypress, machine.Pin.IRQ_FALLING)
 
-while True:
+def per_second(arg1):
+    # Wink Pico's on-board LED so we can see the ticks
     pico_led.value(not pico_led.value())
-    utime.sleep_ms(50)
-    write_lcd("foo")
 
+    # Increment the elapsed seconds of an active timer. Silly
+    # but it'll do. I might clean all this up later...or not.
+    if keys_active[0] == 1:
+        timers[0] += 1
+    if keys_active[1] == 1:
+        timers[1] += 1
+    if keys_active[2] == 1:
+        timers[2] += 1
+    if keys_active[3] == 1:
+        timers[3] += 1
+        
+    write_lcd(LCD_CLEAR)
+    write_lcd("Timers: " + str(timers[0]) + " " + str(timers[1]) + " " + str(timers[2]) + " " + str(timers[3]))
+
+# Create an interrupt every second from the RTC (Real Time Clock)
+timer = Timer(period=1000, mode=Timer.PERIODIC, callback=per_second)
