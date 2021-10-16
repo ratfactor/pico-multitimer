@@ -16,6 +16,10 @@ import binascii
 from machine import Timer
 from array import array
 
+# When running as 'main.py' on startup, devices weren't ready without
+# a wait - let's just go ahead and wait a whole second to be sure.
+utime.sleep_ms(1000)
+
 pico_led = machine.Pin(25, machine.Pin.OUT)
 
 
@@ -29,7 +33,7 @@ pico_led = machine.Pin(25, machine.Pin.OUT)
 bus_id = 0   # i2c bus 0 on pi pico
 sda = machine.Pin(0)
 scl = machine.Pin(1)
-i2c = machine.I2C(bus_id, sda=sda, scl=scl, freq=400000)
+i2c = machine.I2C(bus_id, sda=sda, scl=scl, freq=200000)
 
 # I2C Addresses of devices
 # find with: print(i2c.scan())
