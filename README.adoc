@@ -1,19 +1,10 @@
-= Dave's MultiTimer
+= Dave's RP2040 MultiTimer
 
 image::multitimer.jpg[hardware multi-timer]
 
 A multiple-category project/productivity timer with pretty RGB-lit
 MX-compatible keyboard keyswitches and backlit LCD output. Running a
 ridiculously powerful (yet inexpensive) dual-core ARM processor.
-
-== Work in progress!
-
-This is not a functioning timer _yet_. But I believe I've finally cleared the
-last of the hurdles and the basic timer functionality is just another weekend
-away. :-)
-
-Also coming soon: Some sort of enclosure. Probably wood because that's what I
-have the tools to work with.
 
 == What's it made of?
 
@@ -23,8 +14,18 @@ Hardware:
 * Adafruit NeoKey 1x4 QT I2C Breakout (Cherry-compatible keypad + NeoPixels)
 * SparkFun SerLCD (RGB 16x2 LCD + AVR microcontroller with I2C, etc.)
 
-Runtime/VM:
+== Software Runtime/VM
 
 * link:http://docs.micropython.org/en/latest/rp2/quickref.html[MicroPython]
-* This `multitimer.py`
+* `main.py` in this repo
 
+I chose not to use any external libraries. But I referenced the Sparkfun
+and Adafruit libraries for Python/Micropython/Circuitpython to write this.
+
+== About
+
+This scratched an itch for a hardware timer that I simply could not find
+for sale: a minute-tracking stopwatch with a single category active at
+any one time.
+
+I expect to do a write-up on my website soon. Will post link here.

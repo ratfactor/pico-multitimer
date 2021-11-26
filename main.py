@@ -67,10 +67,11 @@ def read_neokey(amount_bytes):
 # All SerLCD commands start with one of two prefixes. Everything else is
 # treated as character data to be written directly to the screen.
 LCD_SETCMD     = 0x7C
-LCD_CLEAR    = [LCD_SETCMD, 0x2D]
-LCD_CONTRAST = [LCD_SETCMD, 0x18] # followed by 0-255 contrast level
-LCD_SETRGB   = [LCD_SETCMD, 0x2B] # followed by 0xFFFFFF style byte list (RGB)
-LCD_SPECIALCMD = 0xFE
+LCD_CLEAR      = [LCD_SETCMD, 0x2D]
+LCD_CONTRAST   = [LCD_SETCMD, 0x18] # followed by 0-255 contrast level
+LCD_SETRGB     = [LCD_SETCMD, 0x2B] # followed by 0xFFFFFF style byte list (RGB)
+LCD_SPECIALCMD = [0xFE]
+LCD_SETDDRAMADDR = 0x80
 
 # Set contrast and clear screen.
 # (Contrast was determined by a little looping test program.)
@@ -79,8 +80,14 @@ write_lcd(LCD_CLEAR)
 write_lcd(LCD_SETRGB + [0xFF, 0xFF, 0xFF])
 
 
-# TEMP: write something to lcd so we know it works
 write_lcd("Once upon a time...")
+utime.sleep_ms(500) # see if a wait here helps seesaw get ready
+
+def write_lcd_line_two():
+    # Setting DRAM address is a "special command"
+    # Addr 0 is the first character on the first row.
+    LCD_SETDDRAMADDR = 0x80
+    write_lcd(LCD_SPECIALCMD + [LCD_SETDDRAMADDR | 0x40])
 
 
 ##############################################################################
@@ -153,6 +160,7 @@ kp_pins = [0, 0, 0, 0b11110000] # pins 4-7 (out of 64 possible bits)
 write_gpio([GP_DIRCLR] + kp_pins)     # input
 write_gpio([GP_PULLENABLE] + kp_pins) # enable pullup
 write_gpio([GP_SET] + kp_pins)        # enable I/O
+utime.sleep_ms(10)
 write_gpio([GP_INTENSET] + kp_pins)
 
 # TODO: functions to manipulate and then write/display this buffer
@@ -173,33 +181,18 @@ neopixel_buffer_cmd = [
 write_neopixel(neopixel_buffer_cmd)
 write_neopixel([NP_SHOW])
 
-# TODO:
-# [x] Setup neokey key/switch inputs
-# [x] Get interrupt handler working on pico
-# [x] Setup timer interrupt to refresh display
-# [x] Keypresses toggle global on/off for the 4 timers
-#     [ ] Debounce key input
-#     [x] Immediately change LED state to provide feedback to user
-#         that we registered the click
-#     [x] LCD/timer display will reflect change upon next "tick"
-#         (from timer interrupt)
-# [ ] Display times as Minutes
-# [ ] Maybe flash the color reflecting the key, but then revert to a
-#     readable backlight color/brightness after a moment
-#
-# Timer callback (interrupt) example from micropython docs:
-#
-#     from machine import Timer
-#     tim = Timer(period=5000, mode=Timer.ONE_SHOT, callback=lambda t:print(1))
-#     tim.init(period=2000, mode=Timer.PERIODIC, callback=lambda t:print(2))
-#
-# holy crap, i love this RP2040 chip!
-
-# Two arrays store 
+# Two arrays store which timers are active and the current elapsed times in
+# seconds.
 # B=unsigned byte
 # L=unsigned long (4 bytes)
-keys_active = array('B', [0, 0, 0, 0])
-timers      = array('L', [0, 0, 0, 0])
+keys_active  = array('B', [0, 0, 0, 0])
+timers       = array('L', [469, 945, 200, 9340])
+
+# We store the minutes calculations and totals so we can efficiently update
+# the LCD only as needed
+minutes      = array('L', [0, 0, 0, 0])
+total_minutes = 0
+prev_total_minutes = -1
 
 # Setup IRQ and handler for keypress interrupt from neokey
 def on_keypress(pin):
@@ -244,22 +237,45 @@ p14 = machine.Pin(14, machine.Pin.IN, machine.Pin.PULL_UP)
 p14.irq(on_keypress, machine.Pin.IRQ_FALLING)
 
 def per_second(arg1):
+    global timers, minutes, total_minutes, prev_total_minutes
     # Wink Pico's on-board LED so we can see the ticks
     pico_led.value(not pico_led.value())
 
     # Increment the elapsed seconds of an active timer. Silly
     # but it'll do. I might clean all this up later...or not.
+    # I don't see a better method than divmod() for integer
+    # division?
     if keys_active[0] == 1:
         timers[0] += 1
+        minutes[0] = divmod(timers[0], 60)[0]
     if keys_active[1] == 1:
         timers[1] += 1
+        minutes[1] = divmod(timers[1], 60)[0]
     if keys_active[2] == 1:
         timers[2] += 1
+        minutes[2] = divmod(timers[2], 60)[0]
     if keys_active[3] == 1:
         timers[3] += 1
-        
-    write_lcd(LCD_CLEAR)
-    write_lcd("Timers: " + str(timers[0]) + " " + str(timers[1]) + " " + str(timers[2]) + " " + str(timers[3]))
+        minutes[3] = divmod(timers[3], 60)[0]
+    
+    total_minutes = sum(minutes) #minutes[0] + minutes[1] + minutes[2] + minutes[3]
+    
+    # If the minutes have increased, write new totals to the LCD
+    if total_minutes > prev_total_minutes:
+        prev_total_minutes = total_minutes
+        write_lcd(LCD_CLEAR)
+        write_lcd("Total min: " + str(total_minutes))
+        #write_lcd("abcdefghijklmnopqrstuvwxyz")
+        # The address offset + the position in memory for the second
+        # row (starting at 0x40), then +4 for padding for each timer counter
+        write_lcd(LCD_SPECIALCMD + [LCD_SETDDRAMADDR | 0x40])
+        write_lcd(str(minutes[0]))
+        write_lcd(LCD_SPECIALCMD + [LCD_SETDDRAMADDR | 0x44])
+        write_lcd(str(minutes[1]))
+        write_lcd(LCD_SPECIALCMD + [LCD_SETDDRAMADDR | 0x48])
+        write_lcd(str(minutes[2]))
+        write_lcd(LCD_SPECIALCMD + [LCD_SETDDRAMADDR | 0x4c])
+        write_lcd(str(minutes[3]))        
 
 # Create an interrupt every second from the RTC (Real Time Clock)
 timer = Timer(period=1000, mode=Timer.PERIODIC, callback=per_second)
