@@ -6,6 +6,10 @@ A multiple-category project/productivity timer with pretty RGB-lit
 MX-compatible keyboard keyswitches and backlit LCD output. Running a
 ridiculously powerful (yet inexpensive) dual-core ARM processor.
 
+Check out my full write-up (and video!) here:
+
+http://ratfactor.com/multitimer
+
 == What's it made of?
 
 Hardware:
@@ -28,4 +32,5 @@ This scratched an itch for a hardware timer that I simply could not find
 for sale: a minute-tracking stopwatch with a single category active at
 any one time.
 
-I expect to do a write-up on my website soon. Will post link here.
+If you want to program a SerLCD or NeoKey device from scratch, this source
+should provide some helpful reference!
