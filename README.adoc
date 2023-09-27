@@ -1,5 +1,9 @@
 = Dave's RP2040 MultiTimer
 
+
+**MOVED!** Hello, I am moving my repos to http://ratfactor.com/repos/
+and setting them to read-only ("archived") on GitHub. Thank you, _-Dave_
+
 image::multitimer.jpg[hardware multi-timer]
 
 A multiple-category project/productivity timer with pretty RGB-lit
